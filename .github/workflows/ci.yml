@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test
+      - name: Render the fixture
+        run: npm run demo
+
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run the action against a real account
+        id: hoops
+        uses: ./
+        with:
+          github_user_name: HarrisJDCampbell
+          out_dir: out
+      - name: Check both files were written
+        run: test -s "${{ steps.hoops.outputs.light }}" && test -s "${{ steps.hoops.outputs.dark }}"

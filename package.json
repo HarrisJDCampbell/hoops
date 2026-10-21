@@ -1,0 +1,18 @@
+{
+  "name": "contribution-hoops",
+  "version": "1.0.0",
+  "description": "Turn your GitHub contribution graph into an animated basketball shootaround SVG.",
+  "type": "module",
+  "bin": { "hoops": "bin/hoops.mjs" },
+  "exports": "./src/render.mjs",
+  "files": ["bin", "src"],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "demo": "node bin/hoops.mjs --fixture test/fixtures/calendar.json --user octocat --out dist"
+  },
+  "engines": { "node": ">=20" },
+  "keywords": ["github", "github-actions", "profile-readme", "contribution-graph", "svg", "animation", "basketball"],
+  "author": "Harris Campbell",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/HarrisJDCampbell/hoops.git" }
+}

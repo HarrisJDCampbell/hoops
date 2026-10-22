@@ -1,11 +1,80 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildTimeline, parseJersey, parsePace, render } from '../src/render.mjs';
+import { buildTimeline, longestStreak, parseJersey, parsePace, render } from '../src/render.mjs';
 import { makeCalendar } from './fixtures/make-fixture.mjs';
 
 const calendar = makeCalendar();
 const activeDays = calendar.weeks.flatMap((w) => w.contributionDays).filter((d) => d.contributionCount > 0);
 
+
+test('longest streak crosses week boundaries', () => {
+  const weeks = [
+    {
+      contributionDays: [
+        { contributionCount: 1 },
+        { contributionCount: 2 },
+      ],
+    },
+    {
+      contributionDays: [
+        { contributionCount: 1 },
+        { contributionCount: 0 },
+      ],
+    },
+  ];
+
+  assert.equal(longestStreak(weeks), 3);
+});
+
+test('longest streak resets when a day has no contributions', () => {
+  const weeks = [
+    {
+      contributionDays: [
+        { contributionCount: 1 },
+        { contributionCount: 1 },
+        { contributionCount: 0 },
+        { contributionCount: 1 },
+      ],
+    },
+  ];
+
+  assert.equal(longestStreak(weeks), 2);
+});
+
+test('longest streak is zero when there are no contributions', () => {
+  const weeks = [
+    {
+      contributionDays: [
+        { contributionCount: 0 },
+        { contributionCount: 0 },
+      ],
+    },
+    {
+      contributionDays: [
+        { contributionCount: 0 },
+      ],
+    },
+  ];
+
+  assert.equal(longestStreak(weeks), 0);
+});
+test('renders the best contribution streak on the scoreboard', () => {
+  const weeks = [
+    {
+      contributionDays: [
+        { date: '2026-01-01', weekday: 4, contributionCount: 1, contributionLevel: 'FIRST_QUARTILE' },
+        { date: '2026-01-02', weekday: 5, contributionCount: 1, contributionLevel: 'FIRST_QUARTILE' },
+        { date: '2026-01-03', weekday: 6, contributionCount: 1, contributionLevel: 'FIRST_QUARTILE' },
+        { date: '2026-01-04', weekday: 0, contributionCount: 0, contributionLevel: 'NONE' },
+      ],
+    },
+  ];
+
+  const svg = render({ weeks, totalContributions: 3 });
+
+  assert.match(svg, /BEST STREAK 3/);
+  assert.match(svg, />PTS<\/text>/);
+});
 test('one shot for every day with contributions, in calendar order', () => {
   const tl = buildTimeline(calendar.weeks);
   assert.equal(tl.shots.length, activeDays.length);

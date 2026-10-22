@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildTimeline, parseJersey, parsePace, render } from '../src/render.mjs';
+import { buildTimeline, parseHairStyle, parseJersey, parsePace, render } from '../src/render.mjs';
 import { makeCalendar } from './fixtures/make-fixture.mjs';
 
 const calendar = makeCalendar();
@@ -83,9 +83,38 @@ test('jersey presets and custom colours', () => {
 
 test('inputs that end up in the SVG are validated or escaped', () => {
   assert.throws(() => render(calendar, { skin: '"/><script>' }), /skin must be/);
+  assert.throws(() => render(calendar, { hair: 'not-a-color' }), /hair must be/);
+  assert.throws(() => render(calendar, { hairStyle: 'invalid-style' }), /hair-style must be/);
   assert.throws(() => parsePace('fast'), /pace must be/);
   assert.throws(() => parsePace(10), /pace must be/);
   const svg = render(calendar, { user: '<b>&"x' });
   assert.match(svg, /&lt;b&gt;&amp;&quot;x/);
   assert.doesNotMatch(svg, /<b>/);
+});
+
+test('hair colour and hairstyle options', () => {
+  assert.equal(parseHairStyle(), 'short');
+  assert.equal(parseHairStyle('long'), 'long');
+  assert.equal(parseHairStyle(' Headband '), 'headband');
+  assert.throws(() => parseHairStyle('afro'), /hair-style must be/);
+
+  // default hair colour and style
+  const def = render(calendar);
+  assert.match(def, /fill="#2b1d14"/);
+
+  // custom hair colour
+  const customHair = render(calendar, { hair: '#e6be8a' });
+  assert.match(customHair, /fill="#e6be8a"/);
+
+  // long hair style renders the plume and flow down the back
+  const longHair = render(calendar, { hairStyle: 'long', hair: '#123456' });
+  assert.match(longHair, /<rect x="-5" y="-25" width="2" height="4" fill="#123456"\/>/);
+
+  // headband style renders the headband band in trim colour
+  const headband = render(calendar, { hairStyle: 'headband', jersey: 'purple-gold' });
+  assert.match(headband, /<rect x="-3" y="-24" width="6" height="1" fill="#fdb927"\/>/);
+
+  // works with 'hair-style' option key as well
+  const headbandKebab = render(calendar, { 'hair-style': 'headband', jersey: 'purple-gold' });
+  assert.match(headbandKebab, /<rect x="-3" y="-24" width="6" height="1" fill="#fdb927"\/>/);
 });

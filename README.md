@@ -61,6 +61,8 @@ Run it once from the Actions tab, then add this to your README, replacing `you` 
 | `out_dir` | `dist` | Where `hoops.svg` (light) and `hoops-dark.svg` (dark) are written. |
 | `jersey` | `blue-gold` | `blue-gold`, `purple-gold`, `green-white`, `red-white`, `orange-navy`, `black-teal`, or your own `"primary,trim"` hex pair, e.g. `"#1d428a,#ffc72c"`. |
 | `skin` | `#c68b59` | The player's skin tone, as a hex colour. |
+| `hair` | `#2b1d14` | The player's hair colour, as a hex colour. |
+| `hair_style` | `short` | The player's hairstyle: `short`, `long`, or `headband`. |
 | `pace` | `1` | How relaxed he plays, from `0.25` (quick) to `4` (very slow). At `1` a shot takes about 3 seconds, so an active year runs several minutes. |
 
 Outputs: `light` and `dark`, the paths of the two files.

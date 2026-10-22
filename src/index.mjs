@@ -4,7 +4,7 @@
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fetchCalendar } from './github.mjs';
-import { parseColor, parseJersey, parsePace, render } from './render.mjs';
+import { parseColor, parseHairStyle, parseJersey, parsePace, render } from './render.mjs';
 
 const input = (name, fallback = '') => (process.env[`INPUT_${name.toUpperCase()}`] ?? '').trim() || fallback;
 
@@ -16,10 +16,19 @@ try {
   const user = input('github_user_name');
   const token = input('github_token');
   const outDir = input('out_dir', 'dist');
-  const options = { user, jersey: input('jersey', 'blue-gold'), skin: input('skin', '#c68b59'), pace: input('pace', '1') };
+  const options = {
+    user,
+    jersey: input('jersey', 'blue-gold'),
+    skin: input('skin', '#c68b59'),
+    hair: input('hair', '#2b1d14'),
+    hairStyle: input('hair_style', 'short'),
+    pace: input('pace', '1'),
+  };
   // Fail on a bad input before spending a network call.
   parseJersey(options.jersey);
   parseColor(options.skin, 'skin');
+  parseColor(options.hair, 'hair');
+  parseHairStyle(options.hairStyle);
   parsePace(options.pace);
 
   const calendar = await fetchCalendar(user, token);

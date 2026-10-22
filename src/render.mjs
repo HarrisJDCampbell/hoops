@@ -101,7 +101,7 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
 const THEMES = {
   light: {
     cells: ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'],
-    floor: '#d0d7de', text: '#57606a', strong: '#24292f', accent: '#b7791f',
+    floor: '#d0d7de', text: '#57606a', strong: '#24292f', accent: '#8c5f00',
     board: '#ffffff', boardLine: '#8c959f', rim: '#cf222e', net: '#8c959f', pole: '#6e7781',
   },
   dark: {

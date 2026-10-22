@@ -143,6 +143,11 @@ test('renders clean SVG in both themes', () => {
   }
 });
 
+test('light-theme contribution labels use the darkened gold accent', () => {
+  const svg = render(calendar, { theme: 'light' });
+  assert.match(svg, /fill="#8c5f00">\+\d+<\/text>/);
+});
+
 test('reduced motion freezes the animation instead of playing it', () => {
   assert.match(render(calendar), /@media \(prefers-reduced-motion:reduce\)\{\*\{animation-play-state:paused!important/);
 });

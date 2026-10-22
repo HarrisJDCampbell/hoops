@@ -73,12 +73,25 @@ test('an empty year still renders a dunk', () => {
 
 test('jersey presets and custom colours', () => {
   assert.deepEqual(parseJersey('blue-gold'), ['#1d428a', '#ffc72c']);
+  assert.deepEqual(parseJersey('slate-lime'), ['#334155', '#a3e635']);
+  assert.deepEqual(parseJersey('burgundy-sand'), ['#6b1f3a', '#f2c078']);
+  assert.deepEqual(parseJersey('teal-coral'), ['#115e59', '#ff9a8b']);
   assert.deepEqual(parseJersey(' #ABC , #123456 '), ['#abc', '#123456']);
   assert.throws(() => parseJersey('lakers'), /jersey must be/);
   assert.throws(() => parseJersey('#fff,red'), /jersey must be/);
   const svg = render(calendar, { jersey: '#111111,#eeeeee' });
   assert.match(svg, /fill="#111111"/);
   assert.match(svg, /fill="#eeeeee"/);
+});
+
+test('new jersey preset trims render in dark mode', () => {
+  for (const [preset, trim] of [
+    ['slate-lime', '#a3e635'],
+    ['burgundy-sand', '#f2c078'],
+    ['teal-coral', '#ff9a8b'],
+  ]) {
+    assert.match(render(calendar, { theme: 'dark', jersey: preset }), new RegExp(`fill="${trim}"`));
+  }
 });
 
 test('inputs that end up in the SVG are validated or escaped', () => {

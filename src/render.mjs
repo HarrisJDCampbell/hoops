@@ -19,6 +19,9 @@ export const JERSEYS = {
   'red-white': ['#ce1141', '#ffffff'],
   'orange-navy': ['#f58426', '#0c2340'],
   'black-teal': ['#1d1160', '#00788c'],
+  'slate-lime': ['#334155', '#a3e635'],
+  'burgundy-sand': ['#6b1f3a', '#f2c078'],
+  'teal-coral': ['#115e59', '#ff9a8b'],
 };
 
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;

@@ -59,7 +59,7 @@ Run it once from the Actions tab, then add this to your README, replacing `you` 
 | `github_user_name` | repo owner | Whose calendar to play. |
 | `github_token` | `github.token` | Reads the public contribution calendar. The default workflow token is enough. |
 | `out_dir` | `dist` | Where `hoops.svg` (light) and `hoops-dark.svg` (dark) are written. |
-| `jersey` | `blue-gold` | `blue-gold`, `purple-gold`, `green-white`, `red-white`, `orange-navy`, `black-teal`, or your own `"primary,trim"` hex pair, e.g. `"#1d428a,#ffc72c"`. |
+| `jersey` | `blue-gold` | `blue-gold`, `purple-gold`, `green-white`, `red-white`, `orange-navy`, `black-teal`, `slate-lime`, `burgundy-sand`, `teal-coral`, or your own `"primary,trim"` hex pair, e.g. `"#1d428a,#ffc72c"`. |
 | `skin` | `#c68b59` | The player's skin tone, as a hex colour. |
 | `pace` | `1` | How relaxed he plays, from `0.25` (quick) to `4` (very slow). At `1` a shot takes about 3 seconds, so an active year runs several minutes. |
 

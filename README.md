@@ -86,7 +86,7 @@ open dist/hoops-dark.svg
 
 ## Contributing
 
-Ideas and pull requests are welcome. Check the [open issues](https://github.com/HarrisJDCampbell/hoops/issues), especially the ones labelled `good first issue`. Run `npm test` before opening a PR.
+Ideas and pull requests are welcome. Check the [open issues](https://github.com/HarrisJDCampbell/hoops/issues), especially the ones labelled `good first issue`. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, where things live, and how to check an animation by eye.
 
 ## Credits
 

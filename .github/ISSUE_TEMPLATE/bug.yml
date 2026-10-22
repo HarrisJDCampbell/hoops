@@ -1,0 +1,22 @@
+name: Bug
+description: Something looks or works wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A screenshot helps a lot. If the action failed, paste the error from the run log.
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Browser or workflow
+      description: e.g. Safari 18 on iOS, or a link to the failing Actions run
+  - type: textarea
+    id: config
+    attributes:
+      label: Your hoops step
+      description: The `with:` block from your workflow
+      render: yaml

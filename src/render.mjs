@@ -396,6 +396,10 @@ export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = 
     els.push(`<text class="last${k}" x="${W - 12}" y="50" text-anchor="end" font-size="10" fill="${pal.accent}">${shortDate(s.day.date)} · ${s.count}</text>`);
   });
 
+  // Reduced motion: freeze one second in, once the player has faded in and
+  // the grid is still full, instead of playing the whole game.
+  css.push('@media (prefers-reduced-motion:reduce){*{animation-play-state:paused!important;animation-delay:-1s!important}}');
+
   const n = tl.shots.length;
   els.push(`<text x="${GX}" y="${H - 3}" font-size="10" fill="${pal.text}">${calendar.totalContributions.toLocaleString('en-US')} contributions in the last year · one shot for every day with contributions · ${n} for ${n}</text>`);
 

@@ -59,6 +59,10 @@ test('renders clean SVG in both themes', () => {
   }
 });
 
+test('reduced motion freezes the animation instead of playing it', () => {
+  assert.match(render(calendar), /@media \(prefers-reduced-motion:reduce\)\{\*\{animation-play-state:paused!important/);
+});
+
 test('an empty year still renders a dunk', () => {
   const quiet = makeCalendar({ activity: 0 });
   const tl = buildTimeline(quiet.weeks);

@@ -44,6 +44,14 @@ export function parsePace(value = 1) {
   return n;
 }
 
+export const ORDERS = ['oldest-first', 'newest-first'];
+
+export function parseOrder(value = 'oldest-first') {
+  const v = String(value).trim().toLowerCase();
+  if (ORDERS.includes(v)) return v;
+  throw new Error(`order must be one of ${ORDERS.join(', ')} (got "${value}")`);
+}
+
 const escapeXml = (s) => String(s).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]);
 
 // ---------- layout ----------
@@ -115,7 +123,8 @@ const STEP_IN = 10; // pixels he steps toward the hoop while dribbling
 // Longer shots hang in the air longer.
 const flightTime = (dist, pace) => (1.0 + Math.min(1, dist / 800) * 0.7) * Math.min(pace, 1.5);
 
-export function buildTimeline(weeks, { pace = 1 } = {}) {
+export function buildTimeline(weeks, { pace = 1, order = 'oldest-first' } = {}) {
+  order = parseOrder(order);
   const b = Object.fromEntries(Object.entries(BEATS).map(([k, v]) => [k, v * pace]));
   const player = [];   // [t, x, y]
   const walking = [];  // [start, end] windows where he is moving along the floor
@@ -124,8 +133,9 @@ export function buildTimeline(weeks, { pace = 1 } = {}) {
   const shots = [];    // { grab, caught, release, flight, swish, x, y, grabX, day, count }
   const scores = [];   // [t, cumulative score]
 
+  const runUp = 806;
   let t = 0.6;
-  let x = colX(0) - 28;
+  let x = order === 'newest-first' ? runUp : colX(0) - 28;
   player.push([0, x, 0], [t, x, 0]);
   let score = 0;
 
@@ -138,36 +148,48 @@ export function buildTimeline(weeks, { pace = 1 } = {}) {
     player.push([t, x, 0]);
   };
 
-  weeks.forEach((week, i) => {
-    for (const day of week.contributionDays) {
-      if (!(day.contributionCount > 0)) continue;
-      walkTo(colX(i));
-      const grab = t, caught = t + b.grab;
-      armsUp.push([grab, caught]);
-      t = caught;
-      player.push([t, x, 0]);
-
-      const stepStart = t + b.dribble * 0.68;
-      t += b.dribble;
-      walking.push([stepStart, t]);
-      player.push([stepStart, x, 0], [t, x + STEP_IN, 0]);
-      x += STEP_IN;
-      holding.push({ from: caught, to: t, level: LEVELS[day.contributionLevel] || 1 });
-
-      const release = t + b.rise, land = t + b.land;
-      player.push([release, x, -8], [land, x, 0]);
-      armsUp.push([t, land]);
-      const flight = flightTime(RIM_CX - x, pace);
-      const swish = release + flight;
-      shots.push({ grab, caught, release, flight, swish, x, y: FY - 8 - HAND_Y, grabX: colX(i), day, count: day.contributionCount });
-      scores.push([swish, (score += day.contributionCount)]);
-      t = land + b.watch;
-      player.push([t, x, 0]);
+  const activeDays = [];
+  if (order === 'newest-first') {
+    for (let i = weeks.length - 1; i >= 0; i--) {
+      const days = weeks[i].contributionDays;
+      for (let d = days.length - 1; d >= 0; d--) {
+        if (days[d].contributionCount > 0) activeDays.push([i, days[d]]);
+      }
     }
-  });
+  } else {
+    weeks.forEach((week, i) => {
+      for (const day of week.contributionDays) {
+        if (day.contributionCount > 0) activeDays.push([i, day]);
+      }
+    });
+  }
+
+  for (const [i, day] of activeDays) {
+    walkTo(colX(i));
+    const grab = t, caught = t + b.grab;
+    armsUp.push([grab, caught]);
+    t = caught;
+    player.push([t, x, 0]);
+
+    const stepStart = t + b.dribble * 0.68;
+    t += b.dribble;
+    walking.push([stepStart, t]);
+    player.push([stepStart, x, 0], [t, x + STEP_IN, 0]);
+    x += STEP_IN;
+    holding.push({ from: caught, to: t, level: LEVELS[day.contributionLevel] || 1 });
+
+    const release = t + b.rise, land = t + b.land;
+    player.push([release, x, -8], [land, x, 0]);
+    armsUp.push([t, land]);
+    const flight = flightTime(RIM_CX - x, pace);
+    const swish = release + flight;
+    shots.push({ grab, caught, release, flight, swish, x, y: FY - 8 - HAND_Y, grabX: colX(i), day, count: day.contributionCount });
+    scores.push([swish, (score += day.contributionCount)]);
+    t = land + b.watch;
+    player.push([t, x, 0]);
+  }
 
   // Jog to the hoop and dunk. It's for show: the score is already final.
-  const runUp = 806;
   t = Math.max(t, (shots.at(-1)?.swish ?? t) - 0.4);
   player.push([t, x, 0]);
   const jogStart = t;
@@ -248,16 +270,17 @@ const shortDate = (iso) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${Number(iso.
 
 // ---------- render ----------
 
-export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = '#c68b59', pace = 1, user = '' } = {}) {
+export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = '#c68b59', pace = 1, order = 'oldest-first', user = '' } = {}) {
   const bestStreak = longestStreak(calendar.weeks);
   const pal = THEMES[theme];
   if (!pal) throw new Error(`theme must be light or dark (got "${theme}")`);
   const [primary, trim] = parseJersey(jersey);
   const skinTone = parseColor(skin, 'skin');
   pace = parsePace(pace);
+  order = parseOrder(order);
 
   const weeks = calendar.weeks;
-  const tl = buildTimeline(weeks, { pace });
+  const tl = buildTimeline(weeks, { pace, order });
   const { T } = tl;
   const dur = `${T.toFixed(2)}s linear infinite`;
   const css = [];
@@ -409,7 +432,8 @@ export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = 
     els.push(`<text class="score${k}" x="${W - 12}" y="22" text-anchor="end" font-size="18" font-weight="700" fill="${pal.strong}">${value.toLocaleString('en-US')}</text>`);
   });
   els.push(`<text x="${W - 12}" y="35" text-anchor="end" font-size="9" letter-spacing="1" fill="${pal.text}">PTS</text>`);
-  els.push(`<text x="${W - 42}" y="35" text-anchor="end" font-size="9" letter-spacing="1" fill="${pal.text}">BEST STREAK ${bestStreak}</text>`);
+  // Own line under the date, so it doesn't read as "N PTS".
+  els.push(`<text x="${W - 12}" y="64" text-anchor="end" font-size="9" letter-spacing="1" fill="${pal.text}">BEST STREAK ${bestStreak} ${bestStreak === 1 ? 'DAY' : 'DAYS'}</text>`);
   tl.shots.forEach((s, k) => {
     const next = tl.shots[k + 1]?.swish ?? resetAt;
     anim(`last${k}`, windows([[s.swish, next - EPS]], T));

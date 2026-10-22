@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildTimeline, longestStreak, parseJersey, parsePace, render } from '../src/render.mjs';
+import { buildTimeline, longestStreak, parseJersey, parseOrder, parsePace, render } from '../src/render.mjs';
 import { makeCalendar } from './fixtures/make-fixture.mjs';
 
 const calendar = makeCalendar();
@@ -81,6 +81,21 @@ test('one shot for every day with contributions, in calendar order', () => {
   assert.deepEqual(tl.shots.map((s) => s.day.date), activeDays.map((d) => d.date));
 });
 
+test('order: newest-first walks from the most recent day back', () => {
+  const tl = buildTimeline(calendar.weeks, { order: 'newest-first' });
+  assert.equal(tl.shots.length, activeDays.length);
+  assert.deepEqual(tl.shots.map((s) => s.day.date), [...activeDays].reverse().map((d) => d.date));
+  assert.equal(tl.finalScore, calendar.totalContributions);
+  assert.equal(tl.player[0][1], 806, 'player starts beside the hoop on the right');
+
+  for (const theme of ['light', 'dark']) {
+    const svg = render(calendar, { theme, order: 'newest-first' });
+    assert.match(svg, /^<svg [^>]+>/);
+    assert.ok(svg.endsWith('</svg>'));
+    assert.doesNotMatch(svg, /NaN|undefined|Infinity/);
+  }
+});
+
 test('the final score is the total contribution count', () => {
   const tl = buildTimeline(calendar.weeks);
   assert.equal(tl.finalScore, calendar.totalContributions);
@@ -154,6 +169,9 @@ test('inputs that end up in the SVG are validated or escaped', () => {
   assert.throws(() => render(calendar, { skin: '"/><script>' }), /skin must be/);
   assert.throws(() => parsePace('fast'), /pace must be/);
   assert.throws(() => parsePace(10), /pace must be/);
+  assert.throws(() => parseOrder('invalid-order'), /order must be/);
+  assert.equal(parseOrder(' newest-first '), 'newest-first');
+  assert.equal(parseOrder(), 'oldest-first');
   const svg = render(calendar, { user: '<b>&"x' });
   assert.match(svg, /&lt;b&gt;&amp;&quot;x/);
   assert.doesNotMatch(svg, /<b>/);

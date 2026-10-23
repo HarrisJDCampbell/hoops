@@ -18,7 +18,7 @@ try {
   const outDir = input('out_dir', 'dist');
   const options = {
     user, jersey: input('jersey', 'blue-gold'), skin: input('skin', '#c68b59'), pace: input('pace', '1'),
-    order: input('order', 'oldest-first'), maxSeconds: input('max_seconds') || undefined,
+    order: input('order', 'oldest-first'), maxSeconds: input('max_seconds') || undefined, footer: input('footer') || undefined,
   };
   // Fail on a bad input before spending a network call.
   parseJersey(options.jersey);

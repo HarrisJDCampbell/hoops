@@ -139,8 +139,18 @@ test('max_seconds reduces pace using the generated timeline and respects the pac
   const justAbove = buildTimeline(calendar.weeks, { pace: 4, maxSeconds: capped.T + 0.01 });
   assert.ok(justAbove.T >= capped.T, 'a looser limit should not slow the animation further');
   assert.equal(buildTimeline(calendar.weeks, { pace: 1, maxSeconds: normal.T + 10 }).T, normal.T, 'a loose limit preserves the requested pace');
-  assert.throws(() => buildTimeline(calendar.weeks, { pace: 4, maxSeconds: shortest.T - 0.01 }), /shortest supported pace takes/);
-  assert.throws(() => buildTimeline(calendar.weeks, { pace: 0.25, maxSeconds: shortest.T - 0.01 }), /shortest supported pace takes/);
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = (message) => warnings.push(message);
+  try {
+    const impossible = buildTimeline(calendar.weeks, { pace: 4, maxSeconds: shortest.T - 0.01 });
+    assert.equal(impossible.T, shortest.T, 'an impossible cap renders at the minimum supported pace');
+    assert.match(warnings[0], /cannot be met; rendering at pace 0\.25/);
+    assert.equal(buildTimeline(calendar.weeks, { pace: 0.25, maxSeconds: shortest.T - 0.01 }).T, shortest.T);
+    assert.equal(warnings.length, 2);
+  } finally {
+    console.warn = originalWarn;
+  }
 });
 
 test('max_seconds validates positive finite values and render uses the capped loop', () => {
@@ -149,7 +159,17 @@ test('max_seconds validates positive finite values and render uses the capped lo
   }
   const svg = render(calendar, { pace: 4, maxSeconds: 500 });
   assert.match(svg, /animation:[\w-]+ 500\.00s linear infinite/);
-  assert.throws(() => render(calendar, { maxSeconds: 1 }), /shortest supported pace takes/);
+  const minimumDuration = buildTimeline(calendar.weeks, { pace: 0.25 }).T.toFixed(2);
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = (message) => warnings.push(message);
+  try {
+    const impossible = render(calendar, { maxSeconds: 1 });
+    assert.match(impossible, new RegExp(`animation:[\\w-]+ ${minimumDuration}s linear infinite`));
+    assert.match(warnings[0], /cannot be met; rendering at pace 0\.25/);
+  } finally {
+    console.warn = originalWarn;
+  }
 });
 
 test('every keyframe percentage is between 0 and 100 and never goes backwards', () => {
@@ -173,6 +193,11 @@ test('renders clean SVG in both themes', () => {
     assert.doesNotMatch(svg, /NaN|undefined|Infinity/);
     assert.match(svg, /octocat's contributions/);
   }
+});
+
+test('light-theme contribution labels use the darkened gold accent', () => {
+  const svg = render(calendar, { theme: 'light' });
+  assert.match(svg, /fill="#8c5f00">\+\d+<\/text>/);
 });
 
 test('reduced motion freezes the animation instead of playing it', () => {
@@ -226,4 +251,18 @@ test('inputs that end up in the SVG are validated or escaped', () => {
   const svg = render(calendar, { user: '<b>&"x' });
   assert.match(svg, /&lt;b&gt;&amp;&quot;x/);
   assert.doesNotMatch(svg, /<b>/);
+});
+
+test('custom footer text is escaped, defaults are preserved, and none hides it', () => {
+  const defaultFooter = `${calendar.totalContributions.toLocaleString('en-US')} contributions in the last year · one shot for every day with contributions · ${activeDays.length} for ${activeDays.length}`;
+  assert.ok(render(calendar).includes(`>${defaultFooter}</text>`));
+
+  const custom = render(calendar, { footer: '<script>' });
+  assert.ok(custom.includes('&lt;script&gt;'));
+  assert.ok(!custom.includes('<script>'));
+  assert.ok(!render(calendar, { footer: 'none' }).includes('contributions in the last year'));
+
+  const long = render(calendar, { footer: 'x'.repeat(200) });
+  const fontSize = Number(long.match(/<text x="16" y="215" font-size="([^"]+)"/)?.[1]);
+  assert.ok(fontSize > 0 && fontSize < 10);
 });

@@ -107,7 +107,7 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
 const THEMES = {
   light: {
     cells: ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'],
-    floor: '#d0d7de', text: '#57606a', strong: '#24292f', accent: '#b7791f',
+    floor: '#d0d7de', text: '#57606a', strong: '#24292f', accent: '#8c5f00',
     board: '#ffffff', boardLine: '#8c959f', rim: '#cf222e', net: '#8c959f', pole: '#6e7781',
   },
   dark: {
@@ -139,6 +139,7 @@ const STEP_IN = 10; // pixels he steps toward the hoop while dribbling
 const flightTime = (dist, pace) => (1.0 + Math.min(1, dist / 800) * 0.7) * Math.min(pace, 1.5);
 
 function buildTimelineAtPace(weeks, pace, order) {
+  order = parseOrder(order);
   const b = Object.fromEntries(Object.entries(BEATS).map(([k, v]) => [k, v * pace]));
   const player = [];   // [t, x, y]
   const walking = [];  // [start, end] windows where he is moving along the floor
@@ -227,14 +228,16 @@ export function buildTimeline(weeks, { pace = 1, order = 'oldest-first', maxSeco
   pace = parsePace(pace);
   order = parseOrder(order);
   if (maxSeconds !== undefined) maxSeconds = parseMaxSeconds(maxSeconds);
-  const fits = (timeline) => timeline.T <= maxSeconds && Number(timeline.T.toFixed(2)) <= maxSeconds;
+
   const requested = buildTimelineAtPace(weeks, pace, order);
+  const fits = (timeline) => timeline.T <= maxSeconds && Number(timeline.T.toFixed(2)) <= maxSeconds;
   if (maxSeconds === undefined || fits(requested)) return requested;
 
   const minPace = 0.25;
   let lowTimeline = buildTimelineAtPace(weeks, minPace, order);
   if (!fits(lowTimeline)) {
-    throw new Error(`max_seconds ${maxSeconds} cannot be met; the shortest supported pace takes ${lowTimeline.T.toFixed(2)} seconds`);
+    console.warn(`max_seconds ${maxSeconds} cannot be met; rendering at pace 0.25 takes ${lowTimeline.T.toFixed(2)} seconds`);
+    return lowTimeline;
   }
 
   let low = minPace;
@@ -313,7 +316,7 @@ const shortDate = (iso) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${Number(iso.
 
 // ---------- render ----------
 
-export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = '#c68b59', pace = 1, order = 'oldest-first', user = '', maxSeconds } = {}) {
+export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = '#c68b59', pace = 1, order = 'oldest-first', user = '', maxSeconds, footer } = {}) {
   const bestStreak = longestStreak(calendar.weeks);
   const pal = THEMES[theme];
   if (!pal) throw new Error(`theme must be light or dark (got "${theme}")`);
@@ -489,7 +492,12 @@ export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = 
   css.push('@media (prefers-reduced-motion:reduce){*{animation-play-state:paused!important;animation-delay:-1s!important}}');
 
   const n = tl.shots.length;
-  els.push(`<text x="${GX}" y="${H - 3}" font-size="10" fill="${pal.text}">${calendar.totalContributions.toLocaleString('en-US')} contributions in the last year · one shot for every day with contributions · ${n} for ${n}</text>`);
+  const defaultFooter = `${calendar.totalContributions.toLocaleString('en-US')} contributions in the last year · one shot for every day with contributions · ${n} for ${n}`;
+  const footerText = footer === undefined ? defaultFooter : String(footer);
+  if (footerText.trim().toLowerCase() !== 'none') {
+    const fontSize = Math.min(10, (W - 2 * GX) / Math.max(footerText.length * 0.6, 1));
+    els.push(`<text x="${GX}" y="${H - 3}" font-size="${fontSize}" fill="${pal.text}">${escapeXml(footerText)}</text>`);
+  }
 
   const who = user ? `${escapeXml(user)}'s contributions` : 'Contributions';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">` +

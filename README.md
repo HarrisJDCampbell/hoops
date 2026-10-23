@@ -62,6 +62,7 @@ Run it once from the Actions tab, then add this to your README, replacing `you` 
 | `jersey` | `blue-gold` | A preset: `blue-gold`, `purple-gold`, `green-white`, `red-white`, `orange-navy`, `black-teal`, `slate-lime`, `burgundy-sand`, `teal-coral`, `magenta-cyan`, `teal-orange`, `purple-mint`, `green-gold`, `wine-sky`, `cobalt-orange`. Or your own `"primary,trim"` hex pair, e.g. `"#1d428a,#ffc72c"`. |
 | `skin` | `#c68b59` | The player's skin tone, as a hex colour. |
 | `pace` | `1` | How relaxed he plays, from `0.25` (quick) to `4` (very slow). At `1` a shot takes about 3 seconds, so an active year runs several minutes. |
+| `max_seconds` | unset | Positive maximum loop duration in seconds. If the requested pace would exceed it, pace is lowered just enough to fit. If even pace `0.25` is too long, rendering fails with the shortest supported duration. |
 | `order` | `oldest-first` | `oldest-first` (starts at the beginning of the year) or `newest-first` (starts at the most recent week beside the hoop and walks backwards). |
 
 Outputs: `light` and `dark`, the paths of the two files.

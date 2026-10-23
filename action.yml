@@ -25,6 +25,8 @@ inputs:
   pace:
     description: How slowly he plays, from 0.25 (quick) to 4 (very relaxed). 1 is about 3 seconds per shot.
     default: "1"
+  max_seconds:
+    description: Maximum animation loop duration in seconds. If the requested pace would exceed it, pace is lowered just enough to fit; fails if pace 0.25 is still too long.
   order:
     description: Order to play the calendar (oldest-first, newest-first).
     default: oldest-first

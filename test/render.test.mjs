@@ -120,6 +120,38 @@ test('pace stretches the game', () => {
   assert.ok(slow > normal * 1.7, `pace 2 should take about twice as long (${slow} vs ${normal})`);
 });
 
+test('max_seconds reduces pace using the generated timeline and respects the pace floor', () => {
+  const requested = buildTimeline(calendar.weeks, { pace: 4 });
+  const normal = buildTimeline(calendar.weeks, { pace: 1 });
+  const capped = buildTimeline(calendar.weeks, { pace: 4, maxSeconds: 500 });
+  const shortest = buildTimeline(calendar.weeks, { pace: 0.25 });
+  assert.ok(requested.T > 500);
+  assert.ok(capped.T <= 500);
+  assert.ok(capped.T > 499.9, 'uses nearly all of the requested limit');
+  assert.ok(Number(capped.T.toFixed(2)) <= 500, 'rendered CSS duration also stays within the limit');
+  const linearlyScaledPace = 4 * 500 / requested.T;
+  assert.ok(buildTimeline(calendar.weeks, { pace: linearlyScaledPace }).T > 500, 'the nonlinear flight time makes proportional scaling miss the limit');
+  assert.equal(buildTimeline(calendar.weeks, { pace: 4, maxSeconds: requested.T }).T, requested.T, 'pace 4 is preserved at its exact duration limit');
+  const atMinimum = buildTimeline(calendar.weeks, { pace: 4, maxSeconds: shortest.T });
+  assert.ok(atMinimum.T <= shortest.T, 'the exact minimum duration is feasible');
+  assert.ok(atMinimum.T >= shortest.T - 0.01);
+
+  const justAbove = buildTimeline(calendar.weeks, { pace: 4, maxSeconds: capped.T + 0.01 });
+  assert.ok(justAbove.T >= capped.T, 'a looser limit should not slow the animation further');
+  assert.equal(buildTimeline(calendar.weeks, { pace: 1, maxSeconds: normal.T + 10 }).T, normal.T, 'a loose limit preserves the requested pace');
+  assert.throws(() => buildTimeline(calendar.weeks, { pace: 4, maxSeconds: shortest.T - 0.01 }), /shortest supported pace takes/);
+  assert.throws(() => buildTimeline(calendar.weeks, { pace: 0.25, maxSeconds: shortest.T - 0.01 }), /shortest supported pace takes/);
+});
+
+test('max_seconds validates positive finite values and render uses the capped loop', () => {
+  for (const value of [0, -1, 'fast', Infinity]) {
+    assert.throws(() => buildTimeline(calendar.weeks, { maxSeconds: value }), /max_seconds must be a positive number/);
+  }
+  const svg = render(calendar, { pace: 4, maxSeconds: 500 });
+  assert.match(svg, /animation:[\w-]+ 500\.00s linear infinite/);
+  assert.throws(() => render(calendar, { maxSeconds: 1 }), /shortest supported pace takes/);
+});
+
 test('every keyframe percentage is between 0 and 100 and never goes backwards', () => {
   const svg = render(calendar);
   // stride and bounce are short loops of their own, not on the game clock.

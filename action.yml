@@ -25,6 +25,8 @@ inputs:
   pace:
     description: How slowly he plays, from 0.25 (quick) to 4 (very relaxed). 1 is about 3 seconds per shot.
     default: "1"
+  footer:
+    description: Custom text for the bottom line, or "none" to hide it. Defaults to the contribution summary.
   order:
     description: Order to play the calendar (oldest-first, newest-first).
     default: oldest-first

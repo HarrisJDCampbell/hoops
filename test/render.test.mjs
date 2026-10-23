@@ -195,3 +195,17 @@ test('inputs that end up in the SVG are validated or escaped', () => {
   assert.match(svg, /&lt;b&gt;&amp;&quot;x/);
   assert.doesNotMatch(svg, /<b>/);
 });
+
+test('custom footer text is escaped, defaults are preserved, and none hides it', () => {
+  const defaultFooter = `${calendar.totalContributions.toLocaleString('en-US')} contributions in the last year · one shot for every day with contributions · ${activeDays.length} for ${activeDays.length}`;
+  assert.ok(render(calendar).includes(`>${defaultFooter}</text>`));
+
+  const custom = render(calendar, { footer: '<script>' });
+  assert.ok(custom.includes('&lt;script&gt;'));
+  assert.ok(!custom.includes('<script>'));
+  assert.ok(!render(calendar, { footer: 'none' }).includes('contributions in the last year'));
+
+  const long = render(calendar, { footer: 'x'.repeat(200) });
+  const fontSize = Number(long.match(/<text x="16" y="215" font-size="([^"]+)"/)?.[1]);
+  assert.ok(fontSize > 0 && fontSize < 10);
+});

@@ -63,6 +63,7 @@ Run it once from the Actions tab, then add this to your README, replacing `you` 
 | `skin` | `#c68b59` | The player's skin tone, as a hex colour. |
 | `pace` | `1` | How relaxed he plays, from `0.25` (quick) to `4` (very slow). At `1` a shot takes about 3 seconds, so an active year runs several minutes. |
 | `order` | `oldest-first` | `oldest-first` (starts at the beginning of the year) or `newest-first` (starts at the most recent week beside the hoop and walks backwards). |
+| `footer` | contribution summary | Custom text for the bottom line, or `none` to hide it. Long text is scaled to fit the SVG width. |
 
 Outputs: `light` and `dark`, the paths of the two files.
 

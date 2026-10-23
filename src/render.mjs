@@ -279,7 +279,7 @@ const shortDate = (iso) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${Number(iso.
 
 // ---------- render ----------
 
-export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = '#c68b59', pace = 1, order = 'oldest-first', user = '' } = {}) {
+export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = '#c68b59', pace = 1, order = 'oldest-first', user = '', footer } = {}) {
   const bestStreak = longestStreak(calendar.weeks);
   const pal = THEMES[theme];
   if (!pal) throw new Error(`theme must be light or dark (got "${theme}")`);
@@ -454,7 +454,12 @@ export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = 
   css.push('@media (prefers-reduced-motion:reduce){*{animation-play-state:paused!important;animation-delay:-1s!important}}');
 
   const n = tl.shots.length;
-  els.push(`<text x="${GX}" y="${H - 3}" font-size="10" fill="${pal.text}">${calendar.totalContributions.toLocaleString('en-US')} contributions in the last year · one shot for every day with contributions · ${n} for ${n}</text>`);
+  const defaultFooter = `${calendar.totalContributions.toLocaleString('en-US')} contributions in the last year · one shot for every day with contributions · ${n} for ${n}`;
+  const footerText = footer === undefined ? defaultFooter : String(footer);
+  if (footerText.trim().toLowerCase() !== 'none') {
+    const fontSize = Math.min(10, (W - 2 * GX) / Math.max(footerText.length * 0.6, 1));
+    els.push(`<text x="${GX}" y="${H - 3}" font-size="${fontSize}" fill="${pal.text}">${escapeXml(footerText)}</text>`);
+  }
 
   const who = user ? `${escapeXml(user)}'s contributions` : 'Contributions';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">` +

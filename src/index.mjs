@@ -16,7 +16,10 @@ try {
   const user = input('github_user_name');
   const token = input('github_token');
   const outDir = input('out_dir', 'dist');
-  const options = { user, jersey: input('jersey', 'blue-gold'), skin: input('skin', '#c68b59'), pace: input('pace', '1'), order: input('order', 'oldest-first') };
+  const options = {
+    user, jersey: input('jersey', 'blue-gold'), skin: input('skin', '#c68b59'), pace: input('pace', '1'),
+    order: input('order', 'oldest-first'), footer: input('footer') || undefined,
+  };
   // Fail on a bad input before spending a network call.
   parseJersey(options.jersey);
   parseColor(options.skin, 'skin');

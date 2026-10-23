@@ -53,6 +53,12 @@ export function parsePace(value = 1) {
   return n;
 }
 
+export function parseMaxSeconds(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) throw new Error(`max_seconds must be a positive number (got "${value}")`);
+  return n;
+}
+
 export const ORDERS = ['oldest-first', 'newest-first'];
 
 export function parseOrder(value = 'oldest-first') {
@@ -132,7 +138,7 @@ const STEP_IN = 10; // pixels he steps toward the hoop while dribbling
 // Longer shots hang in the air longer.
 const flightTime = (dist, pace) => (1.0 + Math.min(1, dist / 800) * 0.7) * Math.min(pace, 1.5);
 
-export function buildTimeline(weeks, { pace = 1, order = 'oldest-first' } = {}) {
+function buildTimelineAtPace(weeks, pace, order) {
   order = parseOrder(order);
   const b = Object.fromEntries(Object.entries(BEATS).map(([k, v]) => [k, v * pace]));
   const player = [];   // [t, x, y]
@@ -218,6 +224,37 @@ export function buildTimeline(weeks, { pace = 1, order = 'oldest-first' } = {}) 
   return { T, end, rise: b.rise, player, walking, armsUp, holding, shots, dunk: { takeoff, at: peak }, scores, finalScore: score };
 }
 
+export function buildTimeline(weeks, { pace = 1, order = 'oldest-first', maxSeconds } = {}) {
+  pace = parsePace(pace);
+  order = parseOrder(order);
+  if (maxSeconds !== undefined) maxSeconds = parseMaxSeconds(maxSeconds);
+
+  const requested = buildTimelineAtPace(weeks, pace, order);
+  const fits = (timeline) => timeline.T <= maxSeconds && Number(timeline.T.toFixed(2)) <= maxSeconds;
+  if (maxSeconds === undefined || fits(requested)) return requested;
+
+  const minPace = 0.25;
+  let lowTimeline = buildTimelineAtPace(weeks, minPace, order);
+  if (!fits(lowTimeline)) {
+    console.warn(`max_seconds ${maxSeconds} cannot be met; rendering at pace 0.25 takes ${lowTimeline.T.toFixed(2)} seconds`);
+    return lowTimeline;
+  }
+
+  let low = minPace;
+  let high = pace;
+  for (let i = 0; i < 40; i++) {
+    const middle = (low + high) / 2;
+    const timeline = buildTimelineAtPace(weeks, middle, order);
+    if (fits(timeline)) {
+      low = middle;
+      lowTimeline = timeline;
+    } else {
+      high = middle;
+    }
+  }
+  return lowTimeline;
+}
+
 // ---------- keyframes ----------
 
 function keyframes(name, frames, T) {
@@ -279,7 +316,7 @@ const shortDate = (iso) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${Number(iso.
 
 // ---------- render ----------
 
-export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = '#c68b59', pace = 1, order = 'oldest-first', user = '', footer } = {}) {
+export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = '#c68b59', pace = 1, order = 'oldest-first', user = '', maxSeconds, footer } = {}) {
   const bestStreak = longestStreak(calendar.weeks);
   const pal = THEMES[theme];
   if (!pal) throw new Error(`theme must be light or dark (got "${theme}")`);
@@ -287,9 +324,10 @@ export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = 
   const skinTone = parseColor(skin, 'skin');
   pace = parsePace(pace);
   order = parseOrder(order);
+  if (maxSeconds !== undefined) maxSeconds = parseMaxSeconds(maxSeconds);
 
   const weeks = calendar.weeks;
-  const tl = buildTimeline(weeks, { pace, order });
+  const tl = buildTimeline(weeks, { pace, order, maxSeconds });
   const { T } = tl;
   const dur = `${T.toFixed(2)}s linear infinite`;
   const css = [];

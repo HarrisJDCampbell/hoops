@@ -3,6 +3,7 @@
 //
 //   GITHUB_TOKEN=... npx hoops --user octocat [--out dist] [--jersey blue-gold]
 //                    [--skin '#c68b59'] [--pace 1] [--order oldest-first] [--footer 'text|none'] [--fixture calendar.json]
+//   node bin/hoops.mjs --fixture calendar.json --export mp4 --out dist/hoops.mp4 [--fps 10] [--width 900]
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -30,12 +31,28 @@ try {
     console.error(JSON.stringify({ loop: +tl.T.toFixed(2), shots: tl.shots.length, ...(s && { grab: s.grab, release: s.release, swish: s.swish, day: s.day.date }) }));
   }
 
-  const out = args.out ?? 'dist';
-  mkdirSync(out, { recursive: true });
-  for (const theme of ['light', 'dark']) {
-    const file = join(out, theme === 'light' ? 'hoops.svg' : 'hoops-dark.svg');
-    writeFileSync(file, render(calendar, { ...options, theme }));
-    console.log(`wrote ${file}`);
+  if (Object.hasOwn(args, 'export')) {
+    const { exportAnimation } = await import('../src/export.mjs');
+    let progress = '';
+    const result = await exportAnimation(
+      calendar,
+      options,
+      { format: args.export, output: args.out ?? `dist/hoops.${String(args.export ?? '').toLowerCase()}`, fps: args.fps, width: args.width, theme: args.theme },
+      (pass, done, total) => {
+        progress = `\rhoops: ${pass} ${done}/${total} frames`;
+        if (done === total || done === 1 || done % Math.max(1, Math.floor(total / 10)) === 0) process.stderr.write(progress);
+      },
+    );
+    process.stderr.write('\n');
+    console.log(`wrote ${result.output} (${result.width}×${result.height}, ${result.fps} fps, ${result.duration.toFixed(2)} seconds)`);
+  } else {
+    const out = args.out ?? 'dist';
+    mkdirSync(out, { recursive: true });
+    for (const theme of ['light', 'dark']) {
+      const file = join(out, theme === 'light' ? 'hoops.svg' : 'hoops-dark.svg');
+      writeFileSync(file, render(calendar, { ...options, theme }));
+      console.log(`wrote ${file}`);
+    }
   }
 } catch (err) {
   console.error(`hoops: ${err.message}`);

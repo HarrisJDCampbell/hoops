@@ -30,6 +30,8 @@ export const JERSEYS = {
   'cobalt-orange': ['#0052cc', '#ff5400'],
 };
 
+export const HAIR_STYLES = ['short', 'long', 'headband'];
+
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 // Accepts a preset name or "primary,trim" as two hex colours.
@@ -41,6 +43,12 @@ export function parseJersey(value = 'blue-gold') {
   throw new Error(`jersey must be one of ${Object.keys(JERSEYS).join(', ')}, or two hex colours like "#1d428a,#ffc72c" (got "${value}")`);
 }
 
+export function parseHairStyle(value = 'short') {
+  const v = String(value).trim().toLowerCase();
+  if (HAIR_STYLES.includes(v)) return v;
+  throw new Error(`hair-style must be one of ${HAIR_STYLES.join(', ')} (got "${value}")`);
+}
+
 export function parseColor(value, name) {
   const v = String(value).trim();
   if (!HEX.test(v)) throw new Error(`${name} must be a hex colour like #c68b59 (got "${value}")`);
@@ -50,6 +58,12 @@ export function parseColor(value, name) {
 export function parsePace(value = 1) {
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0.25 || n > 4) throw new Error(`pace must be a number from 0.25 to 4 (got "${value}")`);
+  return n;
+}
+
+export function parseMaxSeconds(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) throw new Error(`max_seconds must be a positive number (got "${value}")`);
   return n;
 }
 
@@ -110,7 +124,7 @@ const THEMES = {
     board: '#0d1117', boardLine: '#8b949e', rim: '#f85149', net: '#8b949e', pole: '#6e7681',
   },
 };
-const HAIR = '#2b1d14', SHOES = '#f0f6fc', SEAM = '#7c3a10';
+const SHOES = '#f0f6fc', SEAM = '#7c3a10';
 
 // ---------- timeline ----------
 
@@ -132,7 +146,7 @@ const STEP_IN = 10; // pixels he steps toward the hoop while dribbling
 // Longer shots hang in the air longer.
 const flightTime = (dist, pace) => (1.0 + Math.min(1, dist / 800) * 0.7) * Math.min(pace, 1.5);
 
-export function buildTimeline(weeks, { pace = 1, order = 'oldest-first' } = {}) {
+function buildTimelineAtPace(weeks, pace, order) {
   order = parseOrder(order);
   const b = Object.fromEntries(Object.entries(BEATS).map(([k, v]) => [k, v * pace]));
   const player = [];   // [t, x, y]
@@ -218,6 +232,37 @@ export function buildTimeline(weeks, { pace = 1, order = 'oldest-first' } = {}) 
   return { T, end, rise: b.rise, player, walking, armsUp, holding, shots, dunk: { takeoff, at: peak }, scores, finalScore: score };
 }
 
+export function buildTimeline(weeks, { pace = 1, order = 'oldest-first', maxSeconds } = {}) {
+  pace = parsePace(pace);
+  order = parseOrder(order);
+  if (maxSeconds !== undefined) maxSeconds = parseMaxSeconds(maxSeconds);
+
+  const requested = buildTimelineAtPace(weeks, pace, order);
+  const fits = (timeline) => timeline.T <= maxSeconds && Number(timeline.T.toFixed(2)) <= maxSeconds;
+  if (maxSeconds === undefined || fits(requested)) return requested;
+
+  const minPace = 0.25;
+  let lowTimeline = buildTimelineAtPace(weeks, minPace, order);
+  if (!fits(lowTimeline)) {
+    console.warn(`max_seconds ${maxSeconds} cannot be met; rendering at pace 0.25 takes ${lowTimeline.T.toFixed(2)} seconds`);
+    return lowTimeline;
+  }
+
+  let low = minPace;
+  let high = pace;
+  for (let i = 0; i < 40; i++) {
+    const middle = (low + high) / 2;
+    const timeline = buildTimelineAtPace(weeks, middle, order);
+    if (fits(timeline)) {
+      low = middle;
+      lowTimeline = timeline;
+    } else {
+      high = middle;
+    }
+  }
+  return lowTimeline;
+}
+
 // ---------- keyframes ----------
 
 function keyframes(name, frames, T) {
@@ -279,17 +324,31 @@ const shortDate = (iso) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${Number(iso.
 
 // ---------- render ----------
 
-export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = '#c68b59', pace = 1, order = 'oldest-first', user = '', footer } = {}) {
+export function render(calendar, {
+  theme = 'dark',
+  jersey = 'blue-gold',
+  skin = '#c68b59',
+  hair = '#2b1d14',
+  hairStyle = 'short',
+  pace = 1,
+  order = 'oldest-first',
+  user = '',
+  maxSeconds,
+  footer,
+} = {}) {
   const bestStreak = longestStreak(calendar.weeks);
   const pal = THEMES[theme];
   if (!pal) throw new Error(`theme must be light or dark (got "${theme}")`);
   const [primary, trim] = parseJersey(jersey);
   const skinTone = parseColor(skin, 'skin');
+  const hairColor = parseColor(hair, 'hair');
+  const style = parseHairStyle(hairStyle);
   pace = parsePace(pace);
   order = parseOrder(order);
+  if (maxSeconds !== undefined) maxSeconds = parseMaxSeconds(maxSeconds);
 
   const weeks = calendar.weeks;
-  const tl = buildTimeline(weeks, { pace, order });
+  const tl = buildTimeline(weeks, { pace, order, maxSeconds });
   const { T } = tl;
   const dur = `${T.toFixed(2)}s linear infinite`;
   const css = [];
@@ -411,13 +470,23 @@ export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = 
   for (const h of tl.holding) fills.push([h.from - EPS, fills.at(-1)[1]], [h.from, `fill:${pal.cells[h.level]}`]);
   css.push(keyframes('ballfill', fills, T));
   anim('fadeplayer', [[0, 'opacity:0'], [0.4, 'opacity:1'], [tl.end, 'opacity:1'], [tl.end + FADE * 0.5, 'opacity:0']]);
+  const EYE = '#2b1d14';
+  let hairSvg;
+  if (style === 'headband') {
+    hairSvg = r(-2, -27, 4, 1, hairColor) + r(-3, -26, 6, 1, hairColor) + r(-3, -25, 6, 1, trim) + r(-3, -24, 1, 1, hairColor) + r(1, -24, 1, 1, EYE);
+  } else if (style === 'long') {
+    hairSvg = r(-3, -26, 6, 2, hairColor) + r(1, -24, 1, 1, EYE) + r(-5, -25, 2, 4, hairColor) + r(-4, -21, 1, 4, hairColor);
+  } else {
+    hairSvg = r(-3, -26, 6, 2, hairColor) + r(1, -24, 1, 1, EYE);
+  }
+
   els.push(`<g class="fadeplayer"><g class="player"><g transform="scale(${SCALE})">` +
     `<g class="stand">${legs(-3, 1, 6)}</g>` +
     `<g class="walk"><g class="legA">${legs(-3, 1, 6)}</g><g class="legB">${legs(-4, 2, 4)}</g></g>` +
     r(-4, -12, 8, 4, primary) + r(-4, -12, 8, 1, trim) + r(3, -11, 1, 3, trim) +
     r(-4, -20, 8, 8, primary) + r(-2, -20, 4, 1, trim) + r(-4, -20, 1, 8, trim) +
     r(3, -20, 1, 8, trim) + r(-1, -18, 2, 4, trim) +
-    r(-3, -26, 6, 6, skinTone) + r(-3, -26, 6, 2, HAIR) + r(1, -24, 1, 1, HAIR) +
+    r(-3, -26, 6, 6, skinTone) + hairSvg +
     `<g class="arms-down">${r(-6, -19, 2, 6, skinTone)}${r(4, -19, 2, 7, skinTone)}</g>` +
     `<g class="arms-up">${r(-3, -34, 2, 14, skinTone)}${r(1, -34, 2, 14, skinTone)}` +
     `<circle class="handball" cx="1" cy="-36" r="${BALL_R / SCALE}"/></g>` +

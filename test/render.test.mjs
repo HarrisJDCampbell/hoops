@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildTimeline, longestStreak, parseJersey, parseOrder, parsePace, render } from '../src/render.mjs';
+import { buildTimeline, longestStreak, parseHairStyle, parseJersey, parseOrder, parsePace, render } from '../src/render.mjs';
 import { makeCalendar } from './fixtures/make-fixture.mjs';
 
 const calendar = makeCalendar();
@@ -120,6 +120,58 @@ test('pace stretches the game', () => {
   assert.ok(slow > normal * 1.7, `pace 2 should take about twice as long (${slow} vs ${normal})`);
 });
 
+test('max_seconds reduces pace using the generated timeline and respects the pace floor', () => {
+  const requested = buildTimeline(calendar.weeks, { pace: 4 });
+  const normal = buildTimeline(calendar.weeks, { pace: 1 });
+  const capped = buildTimeline(calendar.weeks, { pace: 4, maxSeconds: 500 });
+  const shortest = buildTimeline(calendar.weeks, { pace: 0.25 });
+  assert.ok(requested.T > 500);
+  assert.ok(capped.T <= 500);
+  assert.ok(capped.T > 499.9, 'uses nearly all of the requested limit');
+  assert.ok(Number(capped.T.toFixed(2)) <= 500, 'rendered CSS duration also stays within the limit');
+  const linearlyScaledPace = 4 * 500 / requested.T;
+  assert.ok(buildTimeline(calendar.weeks, { pace: linearlyScaledPace }).T > 500, 'the nonlinear flight time makes proportional scaling miss the limit');
+  assert.equal(buildTimeline(calendar.weeks, { pace: 4, maxSeconds: requested.T }).T, requested.T, 'pace 4 is preserved at its exact duration limit');
+  const atMinimum = buildTimeline(calendar.weeks, { pace: 4, maxSeconds: shortest.T });
+  assert.ok(atMinimum.T <= shortest.T, 'the exact minimum duration is feasible');
+  assert.ok(atMinimum.T >= shortest.T - 0.01);
+
+  const justAbove = buildTimeline(calendar.weeks, { pace: 4, maxSeconds: capped.T + 0.01 });
+  assert.ok(justAbove.T >= capped.T, 'a looser limit should not slow the animation further');
+  assert.equal(buildTimeline(calendar.weeks, { pace: 1, maxSeconds: normal.T + 10 }).T, normal.T, 'a loose limit preserves the requested pace');
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = (message) => warnings.push(message);
+  try {
+    const impossible = buildTimeline(calendar.weeks, { pace: 4, maxSeconds: shortest.T - 0.01 });
+    assert.equal(impossible.T, shortest.T, 'an impossible cap renders at the minimum supported pace');
+    assert.match(warnings[0], /cannot be met; rendering at pace 0\.25/);
+    assert.equal(buildTimeline(calendar.weeks, { pace: 0.25, maxSeconds: shortest.T - 0.01 }).T, shortest.T);
+    assert.equal(warnings.length, 2);
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+test('max_seconds validates positive finite values and render uses the capped loop', () => {
+  for (const value of [0, -1, 'fast', Infinity]) {
+    assert.throws(() => buildTimeline(calendar.weeks, { maxSeconds: value }), /max_seconds must be a positive number/);
+  }
+  const svg = render(calendar, { pace: 4, maxSeconds: 500 });
+  assert.match(svg, /animation:[\w-]+ 500\.00s linear infinite/);
+  const minimumDuration = buildTimeline(calendar.weeks, { pace: 0.25 }).T.toFixed(2);
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = (message) => warnings.push(message);
+  try {
+    const impossible = render(calendar, { maxSeconds: 1 });
+    assert.match(impossible, new RegExp(`animation:[\\w-]+ ${minimumDuration}s linear infinite`));
+    assert.match(warnings[0], /cannot be met; rendering at pace 0\.25/);
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
 test('every keyframe percentage is between 0 and 100 and never goes backwards', () => {
   const svg = render(calendar);
   // stride and bounce are short loops of their own, not on the game clock.
@@ -191,6 +243,8 @@ test('new jersey preset trims render in dark mode', () => {
 
 test('inputs that end up in the SVG are validated or escaped', () => {
   assert.throws(() => render(calendar, { skin: '"/><script>' }), /skin must be/);
+  assert.throws(() => render(calendar, { hair: 'not-a-color' }), /hair must be/);
+  assert.throws(() => render(calendar, { hairStyle: 'invalid-style' }), /hair-style must be/);
   assert.throws(() => parsePace('fast'), /pace must be/);
   assert.throws(() => parsePace(10), /pace must be/);
   assert.throws(() => parseOrder('invalid-order'), /order must be/);
@@ -199,6 +253,33 @@ test('inputs that end up in the SVG are validated or escaped', () => {
   const svg = render(calendar, { user: '<b>&"x' });
   assert.match(svg, /&lt;b&gt;&amp;&quot;x/);
   assert.doesNotMatch(svg, /<b>/);
+});
+
+test('hair colour and hairstyle options', () => {
+  assert.equal(parseHairStyle(), 'short');
+  assert.equal(parseHairStyle('long'), 'long');
+  assert.equal(parseHairStyle(' Headband '), 'headband');
+  assert.throws(() => parseHairStyle('afro'), /hair-style must be/);
+
+  // default hair colour and style
+  const def = render(calendar);
+  assert.match(def, /fill="#2b1d14"/);
+
+  // custom hair colour
+  const customHair = render(calendar, { hair: '#e6be8a' });
+  assert.match(customHair, /fill="#e6be8a"/);
+  // eye at (1, -24) stays dark (#2b1d14) even with blonde hair
+  assert.match(customHair, /<rect x="1" y="-24" width="1" height="1" fill="#2b1d14"\/>/);
+
+  // long hair style renders the plume and flow down the back
+  const longHair = render(calendar, { hairStyle: 'long', hair: '#123456' });
+  assert.match(longHair, /<rect x="-5" y="-25" width="2" height="4" fill="#123456"\/>/);
+
+  // headband style renders the headband band in trim colour
+  const headband = render(calendar, { hairStyle: 'headband', jersey: 'purple-gold' });
+  assert.match(headband, /<rect x="-3" y="-25" width="6" height="1" fill="#fdb927"\/>/);
+  // the band sits above the eye, so the eye is still drawn
+  assert.match(headband, /<rect x="1" y="-24" width="1" height="1" fill="#2b1d14"\/>/);
 });
 
 test('custom footer text is escaped, defaults are preserved, and none hides it', () => {

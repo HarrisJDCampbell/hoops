@@ -82,6 +82,23 @@ open dist/hoops-dark.svg
 
 `--fixture test/fixtures/calendar.json` renders a made-up year without touching the network.
 
+### Optional GIF and MP4 export
+
+The local CLI can capture one complete animation loop as a GIF or MP4. This optional path needs Node 20+, Playwright with its Chromium browser, and FFmpeg with GIF and `libx264` encoders. The GitHub Action does not load or install these tools and remains dependency-free.
+
+```sh
+npm install --no-save --package-lock=false playwright
+npx playwright install chromium
+brew install ffmpeg
+
+node bin/hoops.mjs --fixture test/fixtures/calendar.json --export gif --out dist/hoops.gif --fps 10 --width 900 --theme dark
+node bin/hoops.mjs --fixture test/fixtures/calendar.json --export mp4 --out dist/hoops.mp4 --fps 10 --width 720 --theme light
+```
+
+`--out` is a file path when exporting and must end in `.gif` or `.mp4`. `--fps` is an integer from 1 to 30 (default 10); `--width` is an even number from 320 to 1800 (default 900), and the height follows the SVG aspect ratio. `--theme` is `dark` or `light` (default `dark`). The export uses the full `buildTimeline()` duration, rounding up to the next frame; GIF timing is quantized to centiseconds. GIFs keep a transparent background and loop continuously; MP4s use the selected theme background and play one loop. Frames are streamed to FFmpeg, so the CLI does not create a directory of temporary images.
+
+Install FFmpeg from your platform's package manager and ensure `ffmpeg` is on `PATH`. The exporter reports missing Playwright, Chromium, or required FFmpeg encoders before completing an output.
+
 ## How it works
 
 - **One clock for everything.** `buildTimeline()` lays out the whole game as timed events: walk, grab, dribble, release, swish, score. `render()` then compiles those events into one CSS `@keyframes` rule per element on a single shared loop length, so the ball, the player, the net, the falling squares and the scoreboard can't drift out of sync.

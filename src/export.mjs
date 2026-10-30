@@ -140,7 +140,7 @@ async function streamFrames(page, settings, ffmpeg, args, onProgress) {
 
 export async function exportAnimation(calendar, options = {}, settings = {}, onProgress) {
   const pace = parsePace(options.pace ?? 1);
-  const timeline = buildTimeline(calendar.weeks, { pace, order: options.order });
+  const timeline = buildTimeline(calendar.weeks, { pace, order: options.order, maxSeconds: options.maxSeconds });
   const theme = settings.theme ?? 'dark';
   const plan = planExport({ ...settings, duration: timeline.T });
   if (existsSync(plan.output)) throw new Error(`output already exists: ${plan.output}`);

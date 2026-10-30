@@ -293,5 +293,14 @@ test('custom footer text is escaped, defaults are preserved, and none hides it',
 
   const long = render(calendar, { footer: 'x'.repeat(200) });
   const fontSize = Number(long.match(/<text x="16" y="215" font-size="([^"]+)"/)?.[1]);
-  assert.ok(fontSize > 0 && fontSize < 10);
+  assert.ok(fontSize > 7 && fontSize < 10);
+  assert.ok(!long.includes('…'));
+
+  const truncated = render(calendar, { footer: 'x'.repeat(300) });
+  const truncFontSize = Number(truncated.match(/<text x="16" y="215" font-size="([^"]+)"/)?.[1]);
+  assert.equal(truncFontSize, 7);
+  assert.ok(truncated.includes('>' + 'x'.repeat(205) + '…' + '</text>'));
+
+  const longXml = render(calendar, { footer: '&'.repeat(300) });
+  assert.ok(longXml.includes('>' + '&amp;'.repeat(205) + '…' + '</text>'));
 });

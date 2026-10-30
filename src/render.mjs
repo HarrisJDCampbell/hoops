@@ -524,9 +524,19 @@ export function render(calendar, {
 
   const n = tl.shots.length;
   const defaultFooter = `${calendar.totalContributions.toLocaleString('en-US')} contributions in the last year · one shot for every day with contributions · ${n} for ${n}`;
-  const footerText = footer === undefined ? defaultFooter : String(footer);
+  let footerText = footer === undefined ? defaultFooter : String(footer);
   if (footerText.trim().toLowerCase() !== 'none') {
-    const fontSize = Math.min(10, (W - 2 * GX) / Math.max(footerText.length * 0.6, 1));
+    const minFontSize = 7;
+    const maxFontSize = 10;
+    const availableWidth = W - 2 * GX;
+    let fontSize = Math.min(maxFontSize, availableWidth / Math.max(footerText.length * 0.6, 1));
+    if (fontSize < minFontSize) {
+      fontSize = minFontSize;
+      const maxChars = Math.floor(availableWidth / (minFontSize * 0.6));
+      if (footerText.length > maxChars) {
+        footerText = footerText.slice(0, maxChars - 1) + '…';
+      }
+    }
     els.push(`<text x="${GX}" y="${H - 3}" font-size="${fontSize}" fill="${pal.text}">${escapeXml(footerText)}</text>`);
   }
 

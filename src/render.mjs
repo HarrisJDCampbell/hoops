@@ -30,6 +30,8 @@ export const JERSEYS = {
   'cobalt-orange': ['#0052cc', '#ff5400'],
 };
 
+export const HAIR_STYLES = ['short', 'long', 'headband'];
+
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 // Accepts a preset name or "primary,trim" as two hex colours.
@@ -39,6 +41,12 @@ export function parseJersey(value = 'blue-gold') {
   const parts = v.split(',').map((p) => p.trim());
   if (parts.length === 2 && parts.every((p) => HEX.test(p))) return parts;
   throw new Error(`jersey must be one of ${Object.keys(JERSEYS).join(', ')}, or two hex colours like "#1d428a,#ffc72c" (got "${value}")`);
+}
+
+export function parseHairStyle(value = 'short') {
+  const v = String(value).trim().toLowerCase();
+  if (HAIR_STYLES.includes(v)) return v;
+  throw new Error(`hair-style must be one of ${HAIR_STYLES.join(', ')} (got "${value}")`);
 }
 
 export function parseColor(value, name) {
@@ -116,7 +124,7 @@ const THEMES = {
     board: '#0d1117', boardLine: '#8b949e', rim: '#f85149', net: '#8b949e', pole: '#6e7681',
   },
 };
-const HAIR = '#2b1d14', SHOES = '#f0f6fc', SEAM = '#7c3a10';
+const SHOES = '#f0f6fc', SEAM = '#7c3a10';
 
 // ---------- timeline ----------
 
@@ -316,12 +324,25 @@ const shortDate = (iso) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${Number(iso.
 
 // ---------- render ----------
 
-export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = '#c68b59', pace = 1, order = 'oldest-first', user = '', maxSeconds, footer } = {}) {
+export function render(calendar, {
+  theme = 'dark',
+  jersey = 'blue-gold',
+  skin = '#c68b59',
+  hair = '#2b1d14',
+  hairStyle = 'short',
+  pace = 1,
+  order = 'oldest-first',
+  user = '',
+  maxSeconds,
+  footer,
+} = {}) {
   const bestStreak = longestStreak(calendar.weeks);
   const pal = THEMES[theme];
   if (!pal) throw new Error(`theme must be light or dark (got "${theme}")`);
   const [primary, trim] = parseJersey(jersey);
   const skinTone = parseColor(skin, 'skin');
+  const hairColor = parseColor(hair, 'hair');
+  const style = parseHairStyle(hairStyle);
   pace = parsePace(pace);
   order = parseOrder(order);
   if (maxSeconds !== undefined) maxSeconds = parseMaxSeconds(maxSeconds);
@@ -449,13 +470,23 @@ export function render(calendar, { theme = 'dark', jersey = 'blue-gold', skin = 
   for (const h of tl.holding) fills.push([h.from - EPS, fills.at(-1)[1]], [h.from, `fill:${pal.cells[h.level]}`]);
   css.push(keyframes('ballfill', fills, T));
   anim('fadeplayer', [[0, 'opacity:0'], [0.4, 'opacity:1'], [tl.end, 'opacity:1'], [tl.end + FADE * 0.5, 'opacity:0']]);
+  const EYE = '#2b1d14';
+  let hairSvg;
+  if (style === 'headband') {
+    hairSvg = r(-2, -27, 4, 1, hairColor) + r(-3, -26, 6, 1, hairColor) + r(-3, -25, 6, 1, trim) + r(-3, -24, 1, 1, hairColor) + r(1, -24, 1, 1, EYE);
+  } else if (style === 'long') {
+    hairSvg = r(-3, -26, 6, 2, hairColor) + r(1, -24, 1, 1, EYE) + r(-5, -25, 2, 4, hairColor) + r(-4, -21, 1, 4, hairColor);
+  } else {
+    hairSvg = r(-3, -26, 6, 2, hairColor) + r(1, -24, 1, 1, EYE);
+  }
+
   els.push(`<g class="fadeplayer"><g class="player"><g transform="scale(${SCALE})">` +
     `<g class="stand">${legs(-3, 1, 6)}</g>` +
     `<g class="walk"><g class="legA">${legs(-3, 1, 6)}</g><g class="legB">${legs(-4, 2, 4)}</g></g>` +
     r(-4, -12, 8, 4, primary) + r(-4, -12, 8, 1, trim) + r(3, -11, 1, 3, trim) +
     r(-4, -20, 8, 8, primary) + r(-2, -20, 4, 1, trim) + r(-4, -20, 1, 8, trim) +
     r(3, -20, 1, 8, trim) + r(-1, -18, 2, 4, trim) +
-    r(-3, -26, 6, 6, skinTone) + r(-3, -26, 6, 2, HAIR) + r(1, -24, 1, 1, HAIR) +
+    r(-3, -26, 6, 6, skinTone) + hairSvg +
     `<g class="arms-down">${r(-6, -19, 2, 6, skinTone)}${r(4, -19, 2, 7, skinTone)}</g>` +
     `<g class="arms-up">${r(-3, -34, 2, 14, skinTone)}${r(1, -34, 2, 14, skinTone)}` +
     `<circle class="handball" cx="1" cy="-36" r="${BALL_R / SCALE}"/></g>` +

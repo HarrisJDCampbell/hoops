@@ -64,6 +64,7 @@ Run it once from the Actions tab, then add this to your README, replacing `you` 
 | `hair` | `#2b1d14` | The player's hair colour, as a hex colour. |
 | `hair_style` | `short` | The player's hairstyle: `short`, `long`, or `headband`. |
 | `pace` | `1` | How relaxed he plays, from `0.25` (quick) to `4` (very slow). At `1` a shot takes about 3 seconds, so an active year runs several minutes. |
+| `max_seconds` | unset | Positive maximum loop duration in seconds. If the requested pace would exceed it, pace is lowered just enough to fit. If even pace `0.25` is too long, it renders at `0.25` and logs a warning. |
 | `order` | `oldest-first` | `oldest-first` (starts at the beginning of the year) or `newest-first` (starts at the most recent week beside the hoop and walks backwards). |
 | `footer` | contribution summary | Custom text for the bottom line, or `none` to hide it. Long text is scaled to fit the SVG width. |
 

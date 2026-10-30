@@ -3,12 +3,12 @@
 //
 //   GITHUB_TOKEN=... npx hoops --user octocat [--out dist] [--jersey blue-gold]
 //                    [--skin '#c68b59'] [--hair '#2b1d14'] [--hair-style short]
-//                    [--pace 1] [--order oldest-first] [--footer 'text|none'] [--fixture calendar.json]
+//                    [--pace 1] [--max-seconds 600] [--order oldest-first] [--footer 'text|none'] [--fixture calendar.json]
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fetchCalendar } from '../src/github.mjs';
-import { buildTimeline, render } from '../src/render.mjs';
+import { buildTimeline, parseMaxSeconds, parseOrder, parsePace, render } from '../src/render.mjs';
 
 const args = {};
 for (let i = 2; i < process.argv.length; i++) {
@@ -28,14 +28,18 @@ try {
     hair: args.hair,
     hairStyle: args['hair-style'],
     pace: args.pace,
+    maxSeconds: args['max-seconds'],
     order: args.order,
     footer: args.footer,
   };
   for (const k of Object.keys(options)) if (options[k] === undefined) delete options[k];
+  parsePace(options.pace ?? 1);
+  parseOrder(options.order);
+  if (options.maxSeconds !== undefined) options.maxSeconds = parseMaxSeconds(options.maxSeconds);
 
   if (args.debug !== undefined) {
     // --debug N prints when shot N happens, for freezing frames while tweaking.
-    const tl = buildTimeline(calendar.weeks, { pace: Number(options.pace ?? 1), order: options.order });
+    const tl = buildTimeline(calendar.weeks, { pace: Number(options.pace ?? 1), order: options.order, maxSeconds: options.maxSeconds });
     const s = tl.shots[Number(args.debug)];
     console.error(JSON.stringify({ loop: +tl.T.toFixed(2), shots: tl.shots.length, ...(s && { grab: s.grab, release: s.release, swish: s.swish, day: s.day.date }) }));
   }

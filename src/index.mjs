@@ -4,7 +4,7 @@
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fetchCalendar } from './github.mjs';
-import { parseColor, parseHairStyle, parseJersey, parseOrder, parsePace, render } from './render.mjs';
+import { parseColor, parseHairStyle, parseJersey, parseMaxSeconds, parseOrder, parsePace, render } from './render.mjs';
 
 const input = (name, fallback = '') => (process.env[`INPUT_${name.toUpperCase()}`] ?? '').trim() || fallback;
 
@@ -24,6 +24,7 @@ try {
     hair: input('hair', '#2b1d14'),
     hairStyle: input('hair_style', 'short'),
     pace: input('pace', '1'),
+    maxSeconds: input('max_seconds') || undefined,
     order: input('order', 'oldest-first'),
     ...(footerInput ? { footer: footerInput } : {}),
   };
@@ -34,6 +35,7 @@ try {
   parseHairStyle(options.hairStyle);
   parsePace(options.pace);
   parseOrder(options.order);
+  if (options.maxSeconds !== undefined) parseMaxSeconds(options.maxSeconds);
 
   const calendar = await fetchCalendar(user, token);
   mkdirSync(outDir, { recursive: true });

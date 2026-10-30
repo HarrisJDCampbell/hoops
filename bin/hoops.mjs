@@ -2,7 +2,8 @@
 // Local CLI: renders the light and dark SVGs without GitHub Actions.
 //
 //   GITHUB_TOKEN=... npx hoops --user octocat [--out dist] [--jersey blue-gold]
-//                    [--skin '#c68b59'] [--pace 1] [--order oldest-first] [--footer 'text|none'] [--fixture calendar.json]
+//                    [--skin '#c68b59'] [--hair '#2b1d14'] [--hair-style short]
+//                    [--pace 1] [--order oldest-first] [--footer 'text|none'] [--fixture calendar.json]
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,7 +21,16 @@ try {
   const calendar = args.fixture
     ? JSON.parse(readFileSync(args.fixture, 'utf8'))
     : await fetchCalendar(user, process.env.GITHUB_TOKEN);
-  const options = { user, jersey: args.jersey, skin: args.skin, pace: args.pace, order: args.order, footer: args.footer };
+  const options = {
+    user,
+    jersey: args.jersey,
+    skin: args.skin,
+    hair: args.hair,
+    hairStyle: args['hair-style'],
+    pace: args.pace,
+    order: args.order,
+    footer: args.footer,
+  };
   for (const k of Object.keys(options)) if (options[k] === undefined) delete options[k];
 
   if (args.debug !== undefined) {

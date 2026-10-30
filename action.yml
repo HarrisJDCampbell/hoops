@@ -22,6 +22,12 @@ inputs:
   skin:
     description: The player's skin tone, as a hex colour.
     default: "#c68b59"
+  hair:
+    description: The player's hair colour, as a hex colour.
+    default: "#2b1d14"
+  hair_style:
+    description: The player's hairstyle (short, long, headband).
+    default: short
   pace:
     description: How slowly he plays, from 0.25 (quick) to 4 (very relaxed). 1 is about 3 seconds per shot.
     default: "1"
